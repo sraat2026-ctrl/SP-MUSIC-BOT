@@ -72,7 +72,7 @@ YOUTUBE_COOKIES_FILE = prepare_youtube_cookies()
 
 
 YDL_OPTIONS = {
-    "format": "bestaudio[ext=m4a]/bestaudio/best",
+    "format": "bestaudio/best",
     "quiet": True,
     "no_warnings": False,
     "noplaylist": True,
@@ -80,10 +80,9 @@ YDL_OPTIONS = {
     "socket_timeout": 20,
     "retries": 3,
     "fragment_retries": 3,
-    "extractor_args": {
-        "youtube": {
-            "player_client": ["android", "web"]
-        }
+    "remote_components": ["ejs:github"],
+    "js_runtimes": {
+        "deno": {}
     },
 }
 
