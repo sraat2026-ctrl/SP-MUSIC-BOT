@@ -4,8 +4,15 @@ import os
 import discord
 import yt_dlp
 from discord.ext import commands
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    load_dotenv = lambda *args, **kwargs: None
 
+# تحميل ملف .env
+load_dotenv()
 
+# قراءة التوكن
 TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True
