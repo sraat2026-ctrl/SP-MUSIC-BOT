@@ -1,18 +1,23 @@
 import asyncio
+import base64
 import os
+from pathlib import Path
 
 import discord
 import yt_dlp
 from discord.ext import commands
+
 try:
     from dotenv import load_dotenv
 except ImportError:
-    load_dotenv = lambda *args, **kwargs: None
+    load_dotenv = None
 
-# تحميل ملف .env
-load_dotenv()
 
-# قراءة التوكن
+BASE_DIR = Path(__file__).resolve().parent
+
+if load_dotenv is not None:
+    load_dotenv(BASE_DIR / ".env")
+
 TOKEN = os.getenv("DISCORD_TOKEN")
 intents = discord.Intents.default()
 intents.message_content = True
@@ -31,12 +36,59 @@ FFMPEG_BEFORE_OPTIONS = (
 )
 
 
+def prepare_youtube_cookies():
+    """إنشاء ملف Cookies مؤقت من YOUTUBE_COOKIES_BASE64."""
+    encoded_cookies = os.getenv(
+        "YOUTUBE_COOKIES_BASE64",
+        ""
+    ).strip()
+
+    if not encoded_cookies:
+        print("ℹ️ YOUTUBE_COOKIES_BASE64 غير موجود.")
+        return None
+
+    cookies_path = Path("/tmp/youtube_cookies.txt")
+
+    try:
+        decoded = base64.b64decode(
+            encoded_cookies,
+            validate=True
+        )
+
+        if not decoded:
+            raise ValueError("ملف Cookies الناتج فارغ.")
+
+        cookies_path.write_bytes(decoded)
+
+        print("✅ تم تجهيز Cookies الخاصة بـ YouTube.")
+        return str(cookies_path)
+
+    except Exception as error:
+        print(f"❌ تعذر تجهيز YouTube Cookies: {error}")
+        return None
+
+
+YOUTUBE_COOKIES_FILE = prepare_youtube_cookies()
+
+
 YDL_OPTIONS = {
-    "format": "bestaudio/best",
+    "format": "bestaudio[ext=m4a]/bestaudio/best",
     "quiet": True,
+    "no_warnings": False,
     "noplaylist": True,
     "default_search": "ytsearch",
+    "socket_timeout": 20,
+    "retries": 3,
+    "fragment_retries": 3,
+    "extractor_args": {
+        "youtube": {
+            "player_client": ["android", "web"]
+        }
+    },
 }
+
+if YOUTUBE_COOKIES_FILE:
+    YDL_OPTIONS["cookiefile"] = YOUTUBE_COOKIES_FILE
 
 
 # قائمة الانتظار
@@ -1085,9 +1137,17 @@ async def play(ctx, *, query: str):
             except discord.HTTPException:
                 pass
 
-        await ctx.send(
-            "❌ لم أتمكن من العثور على الأغنية أو تشغيلها."
-        )
+        error_text = str(error)
+
+        if "Sign in to confirm" in error_text:
+            await ctx.send(
+                "❌ YouTube طلب التحقق. "
+                "تأكد من إعداد YOUTUBE_COOKIES_BASE64 في Railway."
+            )
+        else:
+            await ctx.send(
+                "❌ لم أتمكن من العثور على الأغنية أو تشغيلها."
+            )
 
 
 @play.error
