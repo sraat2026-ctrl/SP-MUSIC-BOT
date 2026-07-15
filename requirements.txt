@@ -1,3 +1,4 @@
 discord.py[voice]>=2.4,<3.0
-yt-dlp
+yt-dlp[default]
 PyNaCl
+python-dotenv
